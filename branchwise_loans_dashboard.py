@@ -1,40 +1,70 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Branchwise Loan Dashboard", layout="wide")
-
-# Path to your Excel file
-excel_file = r"https://docs.google.com/spreadsheets/d/16uAUKfLbCOG7QtvBAAyVVaCfHL52NOZg/export?format=csv"
-
-# Load data function with cache + refresh
-@st.cache_data(ttl=30)  # refresh every 30 seconds
+# ==========================
+# Load Data from Google Sheets
+# ==========================
+@st.cache_data
 def load_data():
-    return pd.read_excel(excel_file)
+    sheet_url = "https://docs.google.com/spreadsheets/d/16uAUKfLbCOG7QtvBAAyVVaCfHL52NOZg/export?format=csv"
+    df = pd.read_csv(sheet_url)
+    return df
 
 df = load_data()
 
-# Dashboard Title
-st.title("🏦 Branchwise Loan Dashboard")
+# ==========================
+# Streamlit App
+# ==========================
+st.set_page_config(page_title="Branchwise Loan Dashboard", layout="wide")
 
-# ========== KPI Metrics ==========
+st.title("🏦 Branchwise Loan Dashboard")
+st.markdown("This dashboard updates automatically whenever the Google Sheet is updated.")
+
+# Show raw data
+with st.expander("📄 View Raw Data"):
+    st.dataframe(df)
+
+# ==========================
+# Filters
+# ==========================
+branches = df["Branch"].unique().tolist()
+selected_branch = st.selectbox("Select Branch", ["All"] + branches)
+
+status_list = df["Status"].unique().tolist()
+selected_status = st.multiselect("Select Loan Status", status_list, default=status_list)
+
+# Apply filters
+filtered_df = df.copy()
+
+if selected_branch != "All":
+    filtered_df = filtered_df[filtered_df["Branch"] == selected_branch]
+
+if selected_status:
+    filtered_df = filtered_df[filtered_df["Status"].isin(selected_status)]
+
+# ==========================
+# Summary KPIs
+# ==========================
+st.subheader("📊 Summary")
 col1, col2 = st.columns(2)
 with col1:
-    st.metric("Total Loan Amount", f"₹{df['Loan_Amount'].sum():,.0f}")
+    st.metric("Total Loans", len(filtered_df))
 with col2:
-    st.metric("Number of Loans", df["Loan_ID"].nunique())
+    st.metric("Total Loan Amount", f"{filtered_df['LoanAmount'].sum():,.2f}")
 
-# ========== Branchwise Summary Table ==========
-st.subheader("📋 Branchwise Loan Summary")
-
-summary_table = df.groupby(["Branch", "Status"], as_index=False).agg(
-    Total_Loan_Amount=("Loan_Amount", "sum"),
-    Number_of_Loans=("Loan_ID", "nunique")
+# ==========================
+# Branchwise Aggregation
+# ==========================
+st.subheader("🏢 Branchwise Loan Amount")
+branch_summary = (
+    filtered_df.groupby("Branch", as_index=False)["LoanAmount"].sum()
 )
 
-st.dataframe(summary_table, use_container_width=True)
+st.dataframe(branch_summary)
 
-st.caption("🔄 This table refreshes every 30 seconds. Add new data in Excel to see updates.")
-
-
-
+# ==========================
+# Chart
+# ==========================
+st.subheader("📈 Loan Amount by Branch")
+st.bar_chart(branch_summary.set_index("Branch"))
 
