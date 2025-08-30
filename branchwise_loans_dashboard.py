@@ -4,8 +4,7 @@ import pandas as pd
 st.set_page_config(page_title="Branchwise Loan Dashboard", layout="wide")
 
 # Path to your Excel file
-excel_file = r"https://docs.google.com/spreadsheets/d/16uAUKfLbCOG7QtvBAAyVVaCfHL52NOZg/export?format=csv
-"
+excel_file = r"https://docs.google.com/spreadsheets/d/16uAUKfLbCOG7QtvBAAyVVaCfHL52NOZg/export?format=csv"
 
 # Load data function with cache + refresh
 @st.cache_data(ttl=30)  # refresh every 30 seconds
@@ -35,6 +34,7 @@ summary_table = df.groupby(["Branch", "Status"], as_index=False).agg(
 st.dataframe(summary_table, use_container_width=True)
 
 st.caption("🔄 This table refreshes every 30 seconds. Add new data in Excel to see updates.")
+
 
 
 
